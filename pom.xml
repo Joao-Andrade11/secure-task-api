@@ -23,7 +23,7 @@
         <jacoco.version>0.8.15</jacoco.version>
         <cyclonedx.version>2.9.3</cyclonedx.version>
         <maven-enforcer.version>3.6.3</maven-enforcer.version>
-        <dependency-check.version>12.2.2</dependency-check.version>
+        <dependency-check.version>13.0.0</dependency-check.version>
         <!-- Security overrides pending the next Spring Boot 3.5.x dependency BOM refresh. -->
         <jackson-bom.version>2.21.6</jackson-bom.version>
         <tomcat.version>10.1.59</tomcat.version>
