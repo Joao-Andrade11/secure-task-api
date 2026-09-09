@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
@@ -43,12 +44,18 @@ public class SecurityConfig {
                         .anyRequest().denyAll())
                 .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, exception) -> writeSecurityError(
-                                response,
-                                HttpServletResponse.SC_UNAUTHORIZED,
-                                "Unauthorized",
-                                "Autenticacao obrigatoria"
-                        ))
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            response.setHeader(
+                                    HttpHeaders.WWW_AUTHENTICATE,
+                                    "Basic realm=\"Secure Task API\""
+                            );
+                            writeSecurityError(
+                                    response,
+                                    HttpServletResponse.SC_UNAUTHORIZED,
+                                    "Unauthorized",
+                                    "Autenticacao obrigatoria"
+                            );
+                        })
                         .accessDeniedHandler((request, response, exception) -> writeSecurityError(
                                 response,
                                 HttpServletResponse.SC_FORBIDDEN,

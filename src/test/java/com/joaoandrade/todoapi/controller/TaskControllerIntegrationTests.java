@@ -45,6 +45,10 @@ class TaskControllerIntegrationTests {
     void rejectsUnauthenticatedRequestsWithJsonError() throws Exception {
         mockMvc.perform(get("/tasks"))
                 .andExpect(status().isUnauthorized())
+                .andExpect(header().string(
+                        "WWW-Authenticate",
+                        "Basic realm=\"Secure Task API\""
+                ))
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.message").value("Autenticacao obrigatoria"));
     }
