@@ -8,9 +8,13 @@ updates:
       time: "08:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    ignore:
+      # Major upgrades require an explicit migration and a full security review.
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
     labels:
       - dependencies
-      - security
 
   - package-ecosystem: github-actions
     directory: "/"
@@ -20,6 +24,9 @@ updates:
       time: "08:30"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
     labels:
       - dependencies
-      - security
