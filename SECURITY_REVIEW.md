@@ -31,6 +31,7 @@ acessar funções sem autenticação ou sem o papel necessário.
 | ----- | ------ | ---------- | ------ |
 | Alto | CRUD sem autenticação | autenticação stateless; escrita somente para `ADMIN` | Mitigado |
 | Alto | Oito advisories transitivos | versões corrigidas, Dependabot e SBOM | Mitigado |
+| Alto | CSRF desabilitado com HTTP Basic | cookie CSRF `SameSite=Strict` e header obrigatório | Mitigado |
 | Alto | H2 Console exposto por padrão | restrito ao profile `dev` e autenticado | Mitigado |
 | Médio | Listagem sem limite | paginação padrão 20 e máximo 100 | Mitigado |
 | Médio | Swagger exposto sempre | desabilitado por padrão | Mitigado |
@@ -59,6 +60,10 @@ Após a correção, uma nova consulta do SBOM final à API OSV analisou 81 compo
 encontrou associações com vulnerabilidades conhecidas. Esse resultado representa a base do OSV
 na data da revisão e não substitui monitoramento contínuo.
 
+O springdoc foi atualizado para 2.9.1 após o Dependabot identificar a versão corretiva publicada
+com mitigações para exaustão de memória no cache por locale e para o Swagger UI incorporado.
+O build completo e a consulta OSV foram repetidos depois dessa atualização.
+
 A execução do OWASP Dependency-Check não terminou: sem API key, a NVD respondeu
 `429 Too Many Requests` ao atualizar aproximadamente 389 mil registros. O profile Maven
 `security` permanece configurado e deve ser executado com `NVD_API_KEY`.
@@ -72,6 +77,7 @@ A execução do OWASP Dependency-Check não terminou: sem API key, a NVD respond
 - exceções inesperadas são registradas no servidor;
 - limites de tamanho existem no DTO e no schema;
 - CORS permanece fechado por padrão;
+- operações de escrita exigem token CSRF além da autenticação;
 - segredos locais reais são ignorados pelo Git.
 
 ## Riscos residuais e decisões
@@ -86,9 +92,10 @@ A execução do OWASP Dependency-Check não terminou: sem API key, a NVD respond
 | não há trilha de auditoria de negócio | registrar ator, ação, resultado e correlation ID |
 | dependências mudam após esta fotografia | manter Dependabot, CodeQL e SCA recorrentes |
 
-O CSRF está desabilitado porque a API é stateless e aceita corpos JSON. Como navegadores podem
-reutilizar credenciais Basic, qualquer uso fora de clientes de API deve ser reavaliado junto
-com CORS, TLS e o modelo de autenticação.
+A API usa um token CSRF armazenado em cookie `SameSite=Strict` e enviado no header
+`X-XSRF-TOKEN`. Essa defesa é mantida mesmo com sessões stateless porque navegadores podem
+reutilizar credenciais Basic. Somente o H2 Console recebe uma exceção de CSRF, limitada ao
+profile local `dev`; o console permanece desabilitado nos demais ambientes.
 
 ## Referências
 
@@ -101,8 +108,8 @@ com CORS, TLS e o modelo de autenticação.
 ## Evidências de verificação
 
 - testes automatizados de 401, 403, CRUD, paginação e validação;
-- build limpo em Java 25 com 8 testes e nenhuma falha;
-- cobertura JaCoCo de 88,76% das linhas, com piso de 80% aplicado pelo Maven;
+- build limpo em Java 25 com 9 testes e nenhuma falha;
+- cobertura JaCoCo de 89,08% das linhas, com piso de 80% aplicado pelo Maven;
 - smoke test do JAR: `401` sem credenciais, paginação limitada, criação `201` e
   documentação/H2 autenticados;
 - Maven Enforcer exige Java 25 e Maven 3.9 ou superior;

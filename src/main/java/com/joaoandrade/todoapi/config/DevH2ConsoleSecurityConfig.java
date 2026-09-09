@@ -8,7 +8,6 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Profile("dev")
@@ -21,7 +20,7 @@ public class DevH2ConsoleSecurityConfig {
         return http
                 .securityMatcher(PathRequest.toH2Console())
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().hasRole("ADMIN"))
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.ignoringRequestMatchers(PathRequest.toH2Console()))
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .httpBasic(Customizer.withDefaults())
                 .build();

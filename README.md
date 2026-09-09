@@ -9,11 +9,12 @@ backend, testes automatizados e segurança por padrão.
 - arquitetura em camadas: Controller → Service → Repository
 - DTOs separados da entidade JPA
 - autenticação HTTP Basic stateless e autorização por papel
+- proteção CSRF por cookie e header nas operações de escrita
 - validação de entrada e respostas de erro consistentes
 - paginação, ordenação e filtro por status
 - OpenAPI/Swagger no ambiente de desenvolvimento
 - testes de integração, cobertura JaCoCo e SBOM CycloneDX
-- cobertura de linhas de 88,76%, com limite mínimo de 80% aplicado no build
+- cobertura de linhas de 89,08%, com limite mínimo de 80% aplicado no build
 - CI, CodeQL `security-extended` e Dependabot
 - revisão de segurança em [SECURITY_REVIEW.md](SECURITY_REVIEW.md)
 
@@ -65,6 +66,7 @@ atrás de TLS.
 | ------ | ------------- | ----------- | ------------------------------------------- |
 | GET    | `/tasks`      | autenticado | Lista tarefas com filtro e paginação        |
 | GET    | `/tasks/{id}` | autenticado | Busca uma tarefa por ID positivo            |
+| GET    | `/csrf`       | autenticado | Emite o token CSRF para operações de escrita |
 | POST   | `/tasks`      | `ADMIN`     | Cria uma tarefa                             |
 | PUT    | `/tasks/{id}` | `ADMIN`     | Substitui os campos editáveis de uma tarefa |
 | DELETE | `/tasks/{id}` | `ADMIN`     | Remove uma tarefa                           |
@@ -84,11 +86,23 @@ curl -u portfolio-admin:dev-only-password \
 ### Criar uma tarefa
 
 ```bash
+COOKIE_JAR=$(mktemp)
+CSRF_TOKEN=$(curl --silent --cookie-jar "$COOKIE_JAR" \
+  -u portfolio-admin:dev-only-password \
+  http://localhost:8080/csrf | jq --raw-output .token)
+
 curl -u portfolio-admin:dev-only-password \
+  --cookie "$COOKIE_JAR" \
   -X POST http://localhost:8080/tasks \
   -H "Content-Type: application/json" \
+  -H "X-XSRF-TOKEN: $CSRF_TOKEN" \
   -d '{"title":"Revisar Spring Security","description":"Validar controles","status":"PENDING"}'
+
+rm "$COOKIE_JAR"
 ```
+
+O exemplo usa `jq` para extrair o token. Requisições `POST`, `PUT` e `DELETE` exigem o cookie
+e o header CSRF, além da autenticação.
 
 O `status` é opcional na criação e assume `PENDING`. No `PUT`, ele é obrigatório para manter
 a semântica de substituição completa.
@@ -97,6 +111,7 @@ a semântica de substituição completa.
 
 - deny-by-default para rotas não mapeadas;
 - autenticação stateless e autorização distinta para leitura e escrita;
+- proteção CSRF com cookie `SameSite=Strict` e header `X-XSRF-TOKEN`;
 - segredos externalizados por variáveis de ambiente;
 - H2 Console, Swagger e SQL detalhado restritos ao profile `dev`;
 - campos JSON desconhecidos são rejeitados;

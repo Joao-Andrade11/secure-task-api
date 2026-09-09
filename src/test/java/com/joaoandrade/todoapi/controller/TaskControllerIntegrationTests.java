@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -55,6 +56,7 @@ class TaskControllerIntegrationTests {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/tasks")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validCreateRequest()))
                 .andExpect(status().isForbidden())
@@ -65,6 +67,7 @@ class TaskControllerIntegrationTests {
     void performsCompleteCrudAsAdmin() throws Exception {
         String location = mockMvc.perform(post("/tasks")
                         .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validCreateRequest()))
                 .andExpect(status().isCreated())
@@ -80,6 +83,7 @@ class TaskControllerIntegrationTests {
 
         mockMvc.perform(put(location)
                         .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -91,7 +95,9 @@ class TaskControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DONE"));
 
-        mockMvc.perform(delete(location).with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD)))
+        mockMvc.perform(delete(location)
+                        .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .with(csrf()))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get(location).with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD)))
@@ -116,6 +122,7 @@ class TaskControllerIntegrationTests {
 
         mockMvc.perform(post("/tasks")
                         .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":"))
                 .andExpect(status().isBadRequest());
@@ -123,6 +130,7 @@ class TaskControllerIntegrationTests {
         String oversizedDescription = "x".repeat(1001);
         mockMvc.perform(post("/tasks")
                         .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"title":"Teste","description":"%s","status":"PENDING"}
@@ -135,6 +143,7 @@ class TaskControllerIntegrationTests {
     void rejectsUnknownJsonFieldsAndIncompletePut() throws Exception {
         mockMvc.perform(post("/tasks")
                         .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"title":"Teste","status":"PENDING","isAdmin":true}
@@ -143,6 +152,7 @@ class TaskControllerIntegrationTests {
 
         mockMvc.perform(put("/tasks/1")
                         .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"title":"Teste","description":"Sem status"}
@@ -155,6 +165,19 @@ class TaskControllerIntegrationTests {
     void rejectsNonPositiveIds() throws Exception {
         mockMvc.perform(get("/tasks/0").with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void requiresCsrfForAuthenticatedWritesAndExposesToken() throws Exception {
+        mockMvc.perform(get("/csrf").with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty());
+
+        mockMvc.perform(post("/tasks")
+                        .with(httpBasic(ADMIN_USERNAME, ADMIN_PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validCreateRequest()))
+                .andExpect(status().isForbidden());
     }
 
     private String validCreateRequest() {
